@@ -1,42 +1,37 @@
 export default async function handler(req, res) {
-  const allowedDomain = "bd71.vercel.app";
   const referer = req.headers.referer || "";
 
-  // Block Direct Browser Access
-  if (!referer.includes(allowedDomain)) {
-    return res.status(200).send(`
-      <html>
-      <body style="background:black;color:red;text-align:center;padding-top:40px;font-family:sans-serif;">
-        <h2>🚫 Access Denied</h2>
-        <p>This stream can only be played from:</p>
-        <h3 style="color:#00eaff;">bd71.vercel.app</h3>
-      </body>
-      </html>
-    `);
+  // Direct access block
+  if (!referer.includes("bd71.vercel.app")) {
+    return res.status(403).send("Access Denied");
   }
 
-  // Master URL or Segment URL
-  let streamUrl = req.query.url;
+  // Master OR Segment URL
+  let streamUrl = req.query.url || req.query.segment;
 
-  // Segment handler
+  if (!streamUrl) {
+    return res.status(400).send("Missing URL");
+  }
+
+  // Full CloudFront URL build
   if (req.query.segment) {
     streamUrl = "https://cloudfrontnet.vercel.app" + req.query.segment;
   }
 
-  if (!streamUrl) {
-    return res.status(400).send("Proxy Error: Missing Stream URL");
-  }
-
   try {
-    const response = await fetch(streamUrl);
-    const type = response.headers.get("content-type");
+    const response = await fetch(streamUrl, {
+      headers: {
+        "Range": req.headers.range || ""
+      }
+    });
+
+    res.setHeader("Content-Type", response.headers.get("content-type"));
+    res.setHeader("Accept-Ranges", "bytes");
+
     const buffer = await response.arrayBuffer();
-
-    res.setHeader("Content-Type", type);
-    res.setHeader("Cache-Control", "no-store");
-
     res.send(Buffer.from(buffer));
+
   } catch (err) {
-    res.status(500).send("Proxy Error: Stream Unavailable");
+    res.status(500).send("Proxy Error");
   }
 }

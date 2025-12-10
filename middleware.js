@@ -4,6 +4,7 @@ export function middleware(req) {
   const url = req.nextUrl;
   const referer = req.headers.get("referer") || "";
 
+  // STREAM FOLDERS
   const protectedPaths = [
     "/doraemon",
     "/sonyaath",
@@ -15,9 +16,10 @@ export function middleware(req) {
     "/dorymon"
   ];
 
-  // Loop through protected stream folders
   for (const path of protectedPaths) {
     if (url.pathname.startsWith(path)) {
+      
+      // ✔ Stream allowed ONLY inside bd71.vercel.app player
       if (!referer.includes("bd71.vercel.app")) {
         return new NextResponse(
           `

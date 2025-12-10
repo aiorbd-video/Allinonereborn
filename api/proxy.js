@@ -2,25 +2,30 @@ export default async function handler(req, res) {
   const allowedDomain = "bd71.vercel.app";
   const referer = req.headers.referer || "";
 
-  // Direct open block + HTML warning
+  // Block Direct Browser Access
   if (!referer.includes(allowedDomain)) {
     return res.status(200).send(`
-      <html><body style="background:black;color:red;text-align:center;padding-top:40px;">
-        <h2>Access Denied</h2>
-        <p>This stream can only be played on <b>bd71.vercel.app</b></p>
-      </body></html>
+      <html>
+      <body style="background:black;color:red;text-align:center;padding-top:40px;font-family:sans-serif;">
+        <h2>🚫 Access Denied</h2>
+        <p>This stream can only be played from:</p>
+        <h3 style="color:#00eaff;">bd71.vercel.app</h3>
+      </body>
+      </html>
     `);
   }
 
-  // URL for master.m3u8 OR segment files
+  // Master URL or Segment URL
   let streamUrl = req.query.url;
 
-  // ✔ Handle segment proxy
+  // Segment handler
   if (req.query.segment) {
-    streamUrl = `https://cloudfrontnet.vercel.app${req.query.segment}`;
+    streamUrl = "https://cloudfrontnet.vercel.app" + req.query.segment;
   }
 
-  if (!streamUrl) return res.status(400).send("Proxy Error: Missing URL");
+  if (!streamUrl) {
+    return res.status(400).send("Proxy Error: Missing Stream URL");
+  }
 
   try {
     const response = await fetch(streamUrl);
@@ -31,8 +36,7 @@ export default async function handler(req, res) {
     res.setHeader("Cache-Control", "no-store");
 
     res.send(Buffer.from(buffer));
-
   } catch (err) {
-    res.status(500).send("Proxy Error");
+    res.status(500).send("Proxy Error: Stream Unavailable");
   }
 }

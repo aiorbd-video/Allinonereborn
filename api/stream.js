@@ -1,17 +1,31 @@
+import fetch from 'node-fetch'; // অথবা বিল্ট-ইন fetch
 import channels from '../channels.js';
 
 export default async function handler(req, res) {
-    const { id } = req.query;
-    
-    // হেডার সেটআপ
-    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const { id, url } = req.query;
 
-    if (!id || !channels[id]) {
-        return res.status(404).send("#EXTM3U\n#EXT-X-ERROR: Channel not found");
+    // ১. টার্গেট URL বের করা
+    let targetUrl = "";
+    
+    if (id && channels[id]) {
+        // যদি চ্যানেল আইডি দেওয়া থাকে (প্রথম রিকোয়েস্ট)
+        targetUrl = channels[id];
+    } else if (url) {
+        // যদি এনকোডেড URL দেওয়া থাকে (নেস্টেড প্লেলিস্টের জন্য)
+        try {
+            targetUrl = Buffer.from(url, 'base64').toString('utf-8');
+        } catch (e) {
+            return res.status(400).send("Invalid URL encoding");
+        }
+    } else {
+        return res.status(404).send("#EXTM3U\n#EXT-X-ERROR: No Channel or URL provided");
     }
 
-    const targetUrl = channels[id];
+    // ২. বর্তমান হোস্ট ডোমেইন বের করা (যাতে লিঙ্ক ভুল না হয়)
+    // যেমন: https://bd71.vercel.app
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const host = req.headers.host;
+    const myDomain = `${protocol}://${host}`;
 
     try {
         const response = await fetch(targetUrl, {
@@ -21,33 +35,41 @@ export default async function handler(req, res) {
             }
         });
 
+        if (!response.ok) return res.status(response.status).send("#EXTM3U\n#EXT-X-ERROR: Source Offline");
+
         const m3u8Content = await response.text();
         const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
 
-        // --- ম্যাজিক পার্ট: লিঙ্ক এনক্রিপ্ট এবং রিপ্লেস করা ---
+        // ৩. লাইন বাই লাইন লিঙ্ক পরিবর্তন করা
         const fixedContent = m3u8Content.split('\n').map(line => {
             const trimmed = line.trim();
-            
-            // যদি এটি কোনো লিঙ্ক হয় (কমেন্ট বা খালি লাইন না হয়)
+
+            // যদি এটি কোনো লিঙ্ক হয়
             if (trimmed && !trimmed.startsWith('#')) {
-                // ১. পূর্ণাঙ্গ URL তৈরি করা
+                // অরিজিনাল পূর্ণাঙ্গ লিঙ্ক তৈরি
                 const absoluteUrl = trimmed.startsWith('http') ? trimmed : baseUrl + trimmed;
-                
-                // ২. URL টি Base64 এ এনকোড করা (যাতে দেখতে বিদঘুটে লাগে এবং নিরাপদ থাকে)
                 const encodedUrl = Buffer.from(absoluteUrl).toString('base64');
-                
-                // ৩. আমাদের প্রক্সি লিঙ্ক বসিয়ে দেওয়া
-                // প্লেয়ার এখন Bozztv তে না গিয়ে আপনার vercel এ রিকোয়েস্ট করবে
-                return `/api/segment?payload=${encodedUrl}`;
+
+                // লজিক: 
+                // ফাইলটি যদি .m3u8 হয় -> আবার stream.js দিয়ে লোড করো
+                // ফাইলটি যদি .ts হয় -> segment.js দিয়ে লোড করো
+                if (absoluteUrl.includes('.m3u8')) {
+                    return `${myDomain}/api/stream?url=${encodedUrl}`;
+                } else {
+                    return `${myDomain}/api/segment?payload=${encodedUrl}`;
+                }
             }
             return line;
         }).join('\n');
 
-        return res.status(200).send(fixedContent);
+        // ৪. রেসপন্স পাঠানো
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.status(200).send(fixedContent);
 
     } catch (error) {
         console.error(error);
-        return res.status(500).send("#EXTM3U\n#EXT-X-ERROR: Server Error");
+        res.status(500).send("#EXTM3U\n#EXT-X-ERROR: Stream Error");
     }
 }
 

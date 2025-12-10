@@ -1,57 +1,71 @@
 import { readFileSync } from "fs";
-import { join } from "path";
+import path from "path";
 
 const ALLOWED = "https://bd71.vercel.app";
 
-// Load stream mapping manually from JSON
-const streams = JSON.parse(
-  readFileSync(join(process.cwd(), "streams.json"), "utf8")
-);
+// Safe load streams.json
+let streams = {};
+try {
+  const filePath = path.join(process.cwd(), "streams.json");
+  streams = JSON.parse(readFileSync(filePath, "utf8"));
+} catch (e) {
+  console.error("streams.json load failed:", e);
+}
 
-function errorHTML() {
-  return `
-  <html><body style="font-family:Arial;text-align:center;padding:40px">
-    <h1 style="color:red">Access Denied</h1>
-    <p>Only allowed from:</p>
+// custom deny HTML
+function deny(res) {
+  res.setHeader("Content-Type", "text/html");
+  return res.status(403).send(`
+  <html><body style="font-family:Arial;text-align:center;padding-top:50px">
+    <h1 style="color:red">⛔ Access Denied</h1>
+    <p>This stream can only be accessed from:</p>
     <b>${ALLOWED}</b>
-  </body></html>`;
+  </body></html>`);
 }
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || "";
-  const referer = req.headers.referer || "";
-
-  if (!origin.startsWith(ALLOWED) || !referer.startsWith(ALLOWED)) {
-    res.setHeader("Content-Type", "text/html");
-    return res.status(403).send(errorHTML());
-  }
-
-  // URL: /streamname/master.m3u8
-  const path = req.url.split("?")[0].split("/");
-  const streamName = path[path.length - 2];
-
-  const defaultUrl = streams[streamName];
-
-  if (!defaultUrl) {
-    return res.status(404).send("Unknown stream: " + streamName);
-  }
-
-  const target = req.query.u
-    ? decodeURIComponent(req.query.u)
-    : defaultUrl;
-
   try {
+    const origin = req.headers.origin || "";
+    const referer = req.headers.referer || "";
+
+    if (!origin.startsWith(ALLOWED) || !referer.startsWith(ALLOWED)) {
+      return deny(res);
+    }
+
+    // Extract stream name
+    const urlPath = req.url.split("?")[0];
+    const parts = urlPath.split("/");
+    const streamName = parts[parts.length - 2];
+
+    const defaultUrl = streams[streamName];
+    if (!defaultUrl) {
+      return res.status(404).send("Stream not found: " + streamName);
+    }
+
+    const target = req.query.u
+      ? decodeURIComponent(req.query.u)
+      : defaultUrl;
+
+    // Fetch playlist safely
     const upstream = await fetch(target);
-    if (!upstream.ok) return res.status(502).send("Playlist Error");
+    if (!upstream.ok) {
+      return res.status(502).send("Source playlist error");
+    }
 
     const text = await upstream.text();
+
+    // If source is not m3u8 but HTML or empty
+    if (!text.includes("#EXTM3U")) {
+      return res.status(500).send("Invalid playlist format");
+    }
+
     const base = target.replace(/[^/]+$/, "");
 
-    const output = text
+    const rewritten = text
       .split("\n")
       .map((line) => {
         const t = line.trim();
-        if (!t || t.startsWith("#")) return line;
+        if (t.startsWith("#") || !t) return line;
 
         let abs;
         try {
@@ -72,8 +86,9 @@ export default async function handler(req, res) {
 
     res.setHeader("Access-Control-Allow-Origin", ALLOWED);
     res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-    return res.send(output);
-  } catch (err) {
-    return res.status(500).send("Master Rewrite Error");
+    return res.send(rewritten);
+  } catch (error) {
+    console.error("MASTER CRASH:", error);
+    return res.status(500).send("MASTER INTERNAL ERROR");
   }
 }

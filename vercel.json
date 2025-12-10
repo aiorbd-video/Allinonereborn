@@ -1,27 +1,82 @@
 {
   "rewrites": [
-    { "source": "/kids/doraemon.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209902/master.m3u8" },
+    {
+      "source": "/doraemon.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209902/master.m3u8"
+    },
+    {
+      "source": "/doraemon/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209902/:path*"
+    },
 
-    { "source": "/entertainment/sonyaath.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209611/master.m3u8" },
 
-    { "source": "/movies/kolkata.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209627/master.m3u8" },
+    {
+      "source": "/sonyaath.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209611/master.m3u8"
+    },
+    {
+      "source": "/sonyaath/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209611/:path*"
+    },
 
-    { "source": "/movies/bollywood1.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209612/master.m3u8" },
 
-    { "source": "/movies/bollywood2.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209593/master.m3u8" },
+    {
+      "source": "/kolkatamovies.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209627/master.m3u8"
+    },
+    {
+      "source": "/kolkatamovies/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209627/:path*"
+    },
 
-    { "source": "/ott/jiocinema.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209622/master.m3u8" },
 
-    { "source": "/kids/cartoons.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209901/master.m3u8" },
+    {
+      "source": "/bollywood1.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209612/master.m3u8"
+    },
+    {
+      "source": "/bollywood1/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209612/:path*"
+    },
 
-    { "source": "/kids/dorymon.m3u8",
-      "destination": "/api/proxy?url=https://cloudfrontnet.vercel.app/tplay/playout/209902/master.m3u8" }
+
+    {
+      "source": "/bollywood2.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209593/master.m3u8"
+    },
+    {
+      "source": "/bollywood2/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209593/:path*"
+    },
+
+
+    {
+      "source": "/jiocinema.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209622/master.m3u8"
+    },
+    {
+      "source": "/jiocinema/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209622/:path*"
+    },
+
+
+    {
+      "source": "/cartoons.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209901/master.m3u8"
+    },
+    {
+      "source": "/cartoons/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209901/:path*"
+    },
+
+
+    {
+      "source": "/dorymon.m3u8",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209902/master.m3u8"
+    },
+    {
+      "source": "/dorymon/:path*",
+      "destination": "https://cloudfrontnet.vercel.app/tplay/playout/209902/:path*"
+    }
   ]
 }

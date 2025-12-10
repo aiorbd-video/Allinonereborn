@@ -4,6 +4,10 @@
     {
       "source": "/live/:id.m3u8",
       "destination": "/api/stream?id=:id"
+    },
+    {
+      "source": "/api/segment",
+      "destination": "/api/segment"
     }
   ]
 }
